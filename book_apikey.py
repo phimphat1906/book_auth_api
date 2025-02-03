@@ -1,4 +1,7 @@
 from flask import Flask, request, jsonify
+from functools import wraps
+
+app = Flask(__name__)
 
 # Sample data (in-memory database for simplicity)
 books = [
@@ -7,14 +10,26 @@ books = [
     {"id": 3, "title": "Book 3", "author": "Author 3"}
 ]
 
-app = Flask(__name__)
-
 @app.route("/")
 def hello_world():
     return "<p>Hello, World!</p>"
 
+# Replace 'your_api_key' with your actual API key
+API_KEY = 'your_api_key'
+
+# API key authentication decorator
+def require_api_key(func):
+    @wraps(func)
+    def decorated(*args, **kwargs):
+        if request.headers.get('Api-Key') == API_KEY:
+            return func(*args, **kwargs)
+        else:
+            return jsonify({"error": "Unauthorized"}), 401
+    return decorated
+
 # Create (POST) operation
 @app.route('/books', methods=['POST'])
+@require_api_key
 def create_book():
     data = request.get_json()
 
@@ -29,11 +44,13 @@ def create_book():
 
 # Read (GET) operation - Get all books
 @app.route('/books', methods=['GET'])
+@require_api_key
 def get_all_books():
     return jsonify({"books": books})
 
 # Read (GET) operation - Get a specific book by ID
 @app.route('/books/<int:book_id>', methods=['GET'])
+@require_api_key
 def get_book(book_id):
     book = next((b for b in books if b["id"] == book_id), None)
     if book:
@@ -43,6 +60,7 @@ def get_book(book_id):
 
 # Update (PUT) operation
 @app.route('/books/<int:book_id>', methods=['PUT'])
+@require_api_key
 def update_book(book_id):
     book = next((b for b in books if b["id"] == book_id), None)
     if book:
@@ -51,9 +69,10 @@ def update_book(book_id):
         return jsonify(book)
     else:
         return jsonify({"error": "Book not found"}), 404
-    
+
 # Delete operation
 @app.route('/books/<int:book_id>', methods=['DELETE'])
+@require_api_key
 def delete_book(book_id):
     global books
     books = [b for b in books if b["id"] != book_id]
